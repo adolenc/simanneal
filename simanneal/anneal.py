@@ -40,6 +40,7 @@ class Annealer(object):
     Tmin = 2.5
     steps = 50000
     updates = 100
+    min_energy = None
     copy_strategy = 'deepcopy'
     user_exit = False
     save_state_on_exit = False
@@ -192,6 +193,8 @@ class Annealer(object):
         prevEnergy = E
         self.best_state = self.copy_state(self.state)
         self.best_energy = E
+        if self.min_energy is not None and self.best_energy <= self.min_energy:
+            return self.best_state, self.best_energy
         trials = accepts = improves = 0
         if self.updates > 0:
             updateWavelength = self.steps / self.updates
@@ -222,6 +225,8 @@ class Annealer(object):
                 if E < self.best_energy:
                     self.best_state = self.copy_state(self.state)
                     self.best_energy = E
+                    if self.min_energy is not None and self.best_energy <= self.min_energy:
+                        return self.best_state, self.best_energy
             if self.updates > 1:
                 if (step // updateWavelength) > ((step - 1) // updateWavelength):
                     self.update(

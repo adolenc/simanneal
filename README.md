@@ -121,6 +121,8 @@ tsp.set_schedule(auto_schedule)
 itinerary, miles = tsp.anneal()
 ```
 
+Sometimes you have a problem for which an optimal solution exists and you can calculate its energy. One such example is the n-queens problem, where 0 queens attacking each-other is optimal. In such cases you may specify that you want the algorithm to terminate after finding the solution by setting `min_energy` member to the energy of the optimal solution.
+
 ## Extra data dependencies
 
 You might have noticed that the `energy` function above requires a `cities` dict 

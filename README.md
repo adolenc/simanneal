@@ -135,6 +135,20 @@ them into the constructor like so
 
 The last line (calling `__init__` on the super class) is critical.
 
+## Implementation Details
+
+The simulated annealing algorithm requires that we track states (current, previous, best), which means we need to copy `self.state` frequently.
+
+Copying an object in Python is not always straightforward or performant. The standard library provides a `copy.deepcopy()` method to copy arbitrary python objects but it is very expensive. Certain objects can be copied by more efficient means: lists can be sliced and dictionaries can use their own .copy method, etc.
+
+In order to facilitate flexibility, you can specify the `copy_strategy` attribute
+which defines one of:
+* `deepcopy`: uses `copy.deepcopy(object)`
+* `slice`: uses `object[:]`
+* `method`: uses `object.copy()`
+
+If you want to implement your own custom copy mechanism, override the `copy_state` method.
+
 ## Optimizations
 
 For some problems the `energy` function is prohibitively expensive to calculate
@@ -149,19 +163,12 @@ energy from the previous state, this approach will save you a call to
 value and sometimes return `None`, depending on the type of modification it
 makes to the state and the complexity of calculting a delta.
 
-## Implementation Details
-
-The simulated annealing algorithm requires that we track states (current, previous, best), which means we need to copy `self.state` frequently.
-
-Copying an object in Python is not always straightforward or performant. The standard library provides a `copy.deepcopy()` method to copy arbitrary python objects but it is very expensive. Certain objects can be copied by more efficient means: lists can be sliced and dictionaries can use their own .copy method, etc.
-
-In order to facilitate flexibility, you can specify the `copy_strategy` attribute
-which defines one of:
-* `deepcopy`: uses `copy.deepcopy(object)`
-* `slice`: uses `object[:]`
-* `method`: uses `object.copy()`
-
-If you want to implement your own custom copy mechanism, override the `copy_state` method.
+Another optimization relates to avoiding copying the state for every move; 
+for some problems it is possible to easily undo the last move. For
+such problems your class can implement an `undo_move(self)` method, which changes
+`self.state` back to the state it was in before the last `move(self)` method call. 
+Using this method almost all the copying can be avoided, which may significantly 
+speed up the annealing process if the copies themselves take a lot of time.
 
 ## Notes
 

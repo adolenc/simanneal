@@ -58,6 +58,8 @@ class Annealer(object):
             raise ValueError('No valid values supplied for neither \
             initial_state nor load_state')
 
+        self.supports_undo_move = hasattr(self, 'undo_move')
+
         signal.signal(signal.SIGINT, self.set_user_exit)
 
     def save_state(self, fname=None):
@@ -114,6 +116,15 @@ class Annealer(object):
             raise RuntimeError('No implementation found for ' +
                                'the self.copy_strategy "%s"' %
                                self.copy_strategy)
+
+    def restore_state(self, state):
+        """Restore the state to a provided state either by making a copy,
+        or by undoing the last move via self.undo_move method if it exists
+        """
+        if self.supports_undo_move:
+            self.undo_move()
+        else:
+            self.state = self.copy_state(state)
 
     def update(self, *args, **kwargs):
         """Wrapper for internal update.
@@ -188,7 +199,7 @@ class Annealer(object):
         # Note initial state
         T = self.Tmax
         E = self.energy()
-        prevState = self.copy_state(self.state)
+        prevState = self.copy_state(self.state) if not self.supports_undo_move else None
         prevEnergy = E
         self.best_state = self.copy_state(self.state)
         self.best_energy = E
@@ -209,15 +220,14 @@ class Annealer(object):
                 E += dE
             trials += 1
             if dE > 0.0 and math.exp(-dE / T) < random.random():
-                # Restore previous state
-                self.state = self.copy_state(prevState)
+                self.restore_state(prevState)
                 E = prevEnergy
             else:
                 # Accept new state and compare to best state
                 accepts += 1
                 if dE < 0.0:
                     improves += 1
-                prevState = self.copy_state(self.state)
+                prevState = self.copy_state(self.state) if not self.supports_undo_move else None
                 prevEnergy = E
                 if E < self.best_energy:
                     self.best_state = self.copy_state(self.state)
@@ -246,7 +256,7 @@ class Annealer(object):
             """Anneals a system at constant temperature and returns the state,
             energy, rate of acceptance, and rate of improvement."""
             E = self.energy()
-            prevState = self.copy_state(self.state)
+            prevState = self.copy_state(self.state) if not self.supports_undo_move else None
             prevEnergy = E
             accepts, improves = 0, 0
             for _ in range(steps):
@@ -257,13 +267,13 @@ class Annealer(object):
                 else:
                     E = prevEnergy + dE
                 if dE > 0.0 and math.exp(-dE / T) < random.random():
-                    self.state = self.copy_state(prevState)
+                    self.state = self.restore_state(prevState)
                     E = prevEnergy
                 else:
                     accepts += 1
                     if dE < 0.0:
                         improves += 1
-                    prevState = self.copy_state(self.state)
+                    prevState = self.copy_state(self.state) if not self.supports_undo_move else None
                     prevEnergy = E
             return E, float(accepts) / steps, float(improves) / steps
 
